@@ -26,6 +26,11 @@ const Dashboard: React.FC = () => {
   const [currentView, setCurrentView] = useState<"dashboard" | "table">(
     "dashboard"
   );
+  const [selectedChart, setSelectedChart] = useState<{
+    title: string;
+    data: Array<{ [key: string]: string | number }>;
+    type: "bar" | "line" | "pie";
+  } | null>(null);
 
   const VIBRANT_COLORS: string[] = [
     "#FF7E7E", // Bright Coral
@@ -144,7 +149,7 @@ const Dashboard: React.FC = () => {
   const totalGames = filteredData.length;
 
   return (
-    <div className="min-h-screen bg-gray-50 p-8">
+    <div className="min-h-screen bg-gray-50 p-4">
       {/* Navigation Menu */}
       <div className="flex gap-4 mb-8">
         <button
@@ -232,13 +237,27 @@ const Dashboard: React.FC = () => {
           </div>
 
           {/* Modern Chart Layout */}
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
             {/* Sales Trend - Full Width */}
-            <div className="lg:col-span-3 bg-white p-6 rounded-xl shadow-md hover:shadow-lg transition-all">
-              <h2 className="text-xl font-semibold mb-4 text-gray-700">
+            <div
+              className="md:col-span-2 xl:col-span-3 bg-white p-4 rounded-xl shadow-md hover:shadow-lg transition-all cursor-pointer"
+              onClick={() =>
+                setSelectedChart({
+                  title: "Sales Trend Over Years",
+                  data: Object.entries(yearlyTrend)
+                    .filter(([year]) => year !== "N/A" && year !== undefined)
+                    .map(([year, sales]) => ({
+                      year: parseInt(year),
+                      sales: Number(sales.toFixed(2)),
+                    })),
+                  type: "line",
+                })
+              }
+            >
+              <h2 className="text-lg font-semibold mb-2 text-gray-700">
                 Sales Trend Over Years
               </h2>
-              <ResponsiveContainer width="100%" height={400}>
+              <ResponsiveContainer width="100%" height={300}>
                 <LineChart
                   data={Object.entries(yearlyTrend)
                     .filter(([year]) => year !== "N/A" && year !== undefined)
@@ -264,11 +283,25 @@ const Dashboard: React.FC = () => {
             </div>
 
             {/* Platform Sales - 2 Columns */}
-            <div className="lg:col-span-2 bg-white p-6 rounded-xl shadow-md hover:shadow-lg transition-all">
-              <h2 className="text-xl font-semibold mb-4 text-gray-700">
+            <div
+              className="md:col-span-2 bg-white p-4 rounded-xl shadow-md hover:shadow-lg transition-all cursor-pointer"
+              onClick={() =>
+                setSelectedChart({
+                  title: "Sales by Platform",
+                  data: Object.entries(platformSales).map(
+                    ([platform, sales]) => ({
+                      platform,
+                      sales: Number(sales.toFixed(2)),
+                    })
+                  ),
+                  type: "bar",
+                })
+              }
+            >
+              <h2 className="text-lg font-semibold mb-2 text-gray-700">
                 Sales by Platform
               </h2>
-              <ResponsiveContainer width="100%" height={400}>
+              <ResponsiveContainer width="100%" height={300}>
                 <BarChart
                   data={Object.entries(platformSales).map(
                     ([platform, sales]) => ({
@@ -288,11 +321,23 @@ const Dashboard: React.FC = () => {
             </div>
 
             {/* Genre Distribution - 1 Column */}
-            <div className="bg-white p-6 rounded-xl shadow-md hover:shadow-lg transition-all">
-              <h2 className="text-xl font-semibold mb-4 text-gray-700">
+            <div
+              className="bg-white p-4 rounded-xl shadow-md hover:shadow-lg transition-all cursor-pointer"
+              onClick={() =>
+                setSelectedChart({
+                  title: "Sales by Genre",
+                  data: Object.entries(genreSales).map(([genre, sales]) => ({
+                    name: genre,
+                    value: Number(sales.toFixed(2)),
+                  })),
+                  type: "pie",
+                })
+              }
+            >
+              <h2 className="text-lg font-semibold mb-2 text-gray-700">
                 Sales by Genre
               </h2>
-              <ResponsiveContainer width="100%" height={400}>
+              <ResponsiveContainer width="100%" height={300}>
                 <PieChart>
                   <Pie
                     data={Object.entries(genreSales).map(([genre, sales]) => ({
@@ -319,11 +364,25 @@ const Dashboard: React.FC = () => {
             </div>
 
             {/* Regional Distribution - 1 Column */}
-            <div className="bg-white p-6 rounded-xl shadow-md hover:shadow-lg transition-all">
-              <h2 className="text-xl font-semibold mb-4 text-gray-700">
+            <div
+              className="bg-white p-4 rounded-xl shadow-md hover:shadow-lg transition-all cursor-pointer"
+              onClick={() =>
+                setSelectedChart({
+                  title: "Regional Sales Distribution",
+                  data: Object.entries(regionalSales).map(
+                    ([region, sales]) => ({
+                      name: region,
+                      value: Number(sales.toFixed(2)),
+                    })
+                  ),
+                  type: "pie",
+                })
+              }
+            >
+              <h2 className="text-lg font-semibold mb-2 text-gray-700">
                 Regional Sales Distribution
               </h2>
-              <ResponsiveContainer width="100%" height={400}>
+              <ResponsiveContainer width="100%" height={300}>
                 <PieChart>
                   <Pie
                     data={Object.entries(regionalSales).map(
@@ -352,11 +411,25 @@ const Dashboard: React.FC = () => {
             </div>
 
             {/* Average Sales by Genre - 2 Columns */}
-            <div className="lg:col-span-2 bg-white p-6 rounded-xl shadow-md hover:shadow-lg transition-all">
-              <h2 className="text-xl font-semibold mb-4 text-gray-700">
+            <div
+              className="md:col-span-2 bg-white p-4 rounded-xl shadow-md hover:shadow-lg transition-all cursor-pointer"
+              onClick={() =>
+                setSelectedChart({
+                  title: "Average Sales by Genre",
+                  data: Object.entries(averageSalesByGenre).map(
+                    ([genre, avg]) => ({
+                      genre,
+                      average: Number(avg.toFixed(2)),
+                    })
+                  ),
+                  type: "bar",
+                })
+              }
+            >
+              <h2 className="text-lg font-semibold mb-2 text-gray-700">
                 Average Sales by Genre
               </h2>
-              <ResponsiveContainer width="100%" height={400}>
+              <ResponsiveContainer width="100%" height={300}>
                 <BarChart
                   data={Object.entries(averageSalesByGenre).map(
                     ([genre, avg]) => ({
@@ -382,11 +455,28 @@ const Dashboard: React.FC = () => {
             </div>
 
             {/* Top Games - Full Width */}
-            <div className="lg:col-span-3 bg-white p-6 rounded-xl shadow-md hover:shadow-lg transition-all">
-              <h2 className="text-xl font-semibold mb-4 text-gray-700">
+            <div
+              className="md:col-span-2 xl:col-span-3 bg-white p-4 rounded-xl shadow-md hover:shadow-lg transition-all cursor-pointer"
+              onClick={() =>
+                setSelectedChart({
+                  title: "Top 10 Games by Global Sales",
+                  data: filteredData
+                    .sort(
+                      (a, b) => (b.Global_Sales || 0) - (a.Global_Sales || 0)
+                    )
+                    .slice(0, 10)
+                    .map((game) => ({
+                      Name: game.Name,
+                      Global_Sales: game.Global_Sales,
+                    })),
+                  type: "bar",
+                })
+              }
+            >
+              <h2 className="text-lg font-semibold mb-2 text-gray-700">
                 Top 10 Games by Global Sales
               </h2>
-              <ResponsiveContainer width="100%" height={400}>
+              <ResponsiveContainer width="100%" height={300}>
                 <BarChart
                   data={filteredData
                     .sort(
@@ -410,6 +500,88 @@ const Dashboard: React.FC = () => {
               </ResponsiveContainer>
             </div>
           </div>
+
+          {/* Chart Detail Modal */}
+          {selectedChart && (
+            <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+              <div className="bg-white rounded-lg p-6 max-w-6xl w-full max-h-[90vh] overflow-y-auto">
+                <div className="flex justify-between items-center mb-4">
+                  <h2 className="text-xl font-bold">{selectedChart.title}</h2>
+                  <button
+                    onClick={() => setSelectedChart(null)}
+                    className="text-gray-500 hover:text-gray-700"
+                  >
+                    ✕
+                  </button>
+                </div>
+                <ResponsiveContainer width="100%" height={600}>
+                  {(() => {
+                    switch (selectedChart.type) {
+                      case "bar":
+                        return (
+                          <BarChart data={selectedChart.data}>
+                            <CartesianGrid strokeDasharray="3 3" />
+                            <XAxis
+                              dataKey={Object.keys(selectedChart.data[0])[0]}
+                            />
+                            <YAxis />
+                            <Tooltip />
+                            <Legend />
+                            <Bar
+                              dataKey={Object.keys(selectedChart.data[0])[1]}
+                              fill="#7EBAFF"
+                            />
+                          </BarChart>
+                        );
+                      case "line":
+                        return (
+                          <LineChart data={selectedChart.data}>
+                            <CartesianGrid strokeDasharray="3 3" />
+                            <XAxis
+                              dataKey={Object.keys(selectedChart.data[0])[0]}
+                            />
+                            <YAxis />
+                            <Tooltip />
+                            <Legend />
+                            <Line
+                              type="monotone"
+                              dataKey={Object.keys(selectedChart.data[0])[1]}
+                              stroke="#FF7E7E"
+                            />
+                          </LineChart>
+                        );
+                      case "pie":
+                        return (
+                          <PieChart>
+                            <Pie
+                              data={selectedChart.data}
+                              dataKey={Object.keys(selectedChart.data[0])[1]}
+                              nameKey={Object.keys(selectedChart.data[0])[0]}
+                              label
+                            >
+                              {selectedChart.data.map((_, index) => (
+                                <Cell
+                                  key={`cell-${index}`}
+                                  fill={
+                                    VIBRANT_COLORS[
+                                      index % VIBRANT_COLORS.length
+                                    ]
+                                  }
+                                />
+                              ))}
+                            </Pie>
+                            <Tooltip />
+                            <Legend />
+                          </PieChart>
+                        );
+                      default:
+                        return <div>No chart type selected</div>;
+                    }
+                  })()}
+                </ResponsiveContainer>
+              </div>
+            </div>
+          )}
         </>
       )}
     </div>

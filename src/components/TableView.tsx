@@ -15,6 +15,7 @@ const TableView: React.FC<TableViewProps> = ({ data }) => {
   } | null>(null);
   const [filterPlatform, setFilterPlatform] = useState("all");
   const [filterGenre, setFilterGenre] = useState("all");
+  const [selectedGame, setSelectedGame] = useState<GameData | null>(null);
 
   const uniquePlatforms = useMemo(
     () => ["all", ...new Set(data.map((item) => item.Platform))],
@@ -67,23 +68,27 @@ const TableView: React.FC<TableViewProps> = ({ data }) => {
     }));
   };
 
+  const handleRowClick = (game: GameData) => {
+    setSelectedGame(game);
+  };
+
   return (
-    <div className="bg-white p-6 rounded-xl shadow-md">
-      <h1 className="text-4xl font-bold mb-8 text-gray-700">
+    <div className="bg-white p-4 rounded-xl shadow-md">
+      <h1 className="text-2xl font-bold mb-4 text-gray-700">
         Video Game Sales Data
       </h1>
 
       {/* Search and Filters */}
-      <div className="flex flex-wrap gap-4 mb-6">
+      <div className="flex flex-wrap gap-2 mb-4">
         <input
           type="text"
           placeholder="Search..."
-          className="p-2 border rounded-lg"
+          className="p-1 text-sm border rounded-lg"
           value={searchTerm}
           onChange={(e) => setSearchTerm(e.target.value)}
         />
         <select
-          className="p-2 border rounded-lg"
+          className="p-1 text-sm border rounded-lg"
           value={filterPlatform}
           onChange={(e) => setFilterPlatform(e.target.value)}
         >
@@ -94,7 +99,7 @@ const TableView: React.FC<TableViewProps> = ({ data }) => {
           ))}
         </select>
         <select
-          className="p-2 border rounded-lg"
+          className="p-1 text-sm border rounded-lg"
           value={filterGenre}
           onChange={(e) => setFilterGenre(e.target.value)}
         >
@@ -107,12 +112,12 @@ const TableView: React.FC<TableViewProps> = ({ data }) => {
       </div>
 
       {/* Results info */}
-      <div className="mb-4 text-gray-600">
+      <div className="mb-2 text-sm text-gray-600">
         Showing {paginatedData.length} of {sortedData.length} results
       </div>
 
       <div className="overflow-x-auto">
-        <table className="min-w-full table-auto">
+        <table className="min-w-full table-auto text-sm">
           <thead className="bg-gray-50">
             <tr>
               {[
@@ -130,7 +135,7 @@ const TableView: React.FC<TableViewProps> = ({ data }) => {
                 <th
                   key={column}
                   onClick={() => handleSort(column as keyof GameData)}
-                  className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100"
+                  className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100"
                 >
                   {column}
                   {sortConfig?.key === column && (
@@ -142,35 +147,31 @@ const TableView: React.FC<TableViewProps> = ({ data }) => {
           </thead>
           <tbody className="bg-white divide-y divide-gray-200">
             {paginatedData.map((game, index) => (
-              <tr key={index} className="hover:bg-gray-50">
-                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                  {game.Name}
-                </td>
-                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                  {game.Platform}
-                </td>
-                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                  {game.Year}
-                </td>
-                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                  {game.Genre}
-                </td>
-                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+              <tr
+                key={index}
+                onClick={() => handleRowClick(game)}
+                className="hover:bg-gray-50 cursor-pointer"
+              >
+                <td className="px-3 py-2 whitespace-nowrap">{game.Name}</td>
+                <td className="px-3 py-2 whitespace-nowrap">{game.Platform}</td>
+                <td className="px-3 py-2 whitespace-nowrap">{game.Year}</td>
+                <td className="px-3 py-2 whitespace-nowrap">{game.Genre}</td>
+                <td className="px-3 py-2 whitespace-nowrap">
                   {game.Publisher}
                 </td>
-                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                <td className="px-3 py-2 whitespace-nowrap">
                   {game.NA_Sales?.toFixed(2)}
                 </td>
-                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                <td className="px-3 py-2 whitespace-nowrap">
                   {game.EU_Sales?.toFixed(2)}
                 </td>
-                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                <td className="px-3 py-2 whitespace-nowrap">
                   {game.JP_Sales?.toFixed(2)}
                 </td>
-                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                <td className="px-3 py-2 whitespace-nowrap">
                   {game.Other_Sales?.toFixed(2)}
                 </td>
-                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                <td className="px-3 py-2 whitespace-nowrap">
                   {game.Global_Sales?.toFixed(2)}
                 </td>
               </tr>
@@ -180,9 +181,9 @@ const TableView: React.FC<TableViewProps> = ({ data }) => {
       </div>
 
       {/* Pagination */}
-      <div className="mt-4 flex items-center justify-between">
+      <div className="mt-4 flex items-center justify-between text-sm">
         <button
-          className="px-4 py-2 border rounded-lg disabled:opacity-50"
+          className="px-3 py-1 border rounded-lg disabled:opacity-50"
           onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
           disabled={currentPage === 1}
         >
@@ -192,13 +193,67 @@ const TableView: React.FC<TableViewProps> = ({ data }) => {
           Page {currentPage} of {totalPages}
         </span>
         <button
-          className="px-4 py-2 border rounded-lg disabled:opacity-50"
+          className="px-3 py-1 border rounded-lg disabled:opacity-50"
           onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
           disabled={currentPage === totalPages}
         >
           Next
         </button>
       </div>
+
+      {/* Game Overview Modal */}
+      {selectedGame && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4">
+          <div className="bg-white rounded-lg p-6 max-w-2xl w-full">
+            <div className="flex justify-between items-center mb-4">
+              <h2 className="text-xl font-bold">{selectedGame.Name}</h2>
+              <button
+                onClick={() => setSelectedGame(null)}
+                className="text-gray-500 hover:text-gray-700"
+              >
+                ✕
+              </button>
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <p>
+                  <strong>Platform:</strong> {selectedGame.Platform}
+                </p>
+                <p>
+                  <strong>Year:</strong> {selectedGame.Year}
+                </p>
+                <p>
+                  <strong>Genre:</strong> {selectedGame.Genre}
+                </p>
+                <p>
+                  <strong>Publisher:</strong> {selectedGame.Publisher}
+                </p>
+              </div>
+              <div>
+                <h3 className="font-bold mb-2">Sales (in millions):</h3>
+                <p>
+                  <strong>North America:</strong>{" "}
+                  {selectedGame.NA_Sales?.toFixed(2)}
+                </p>
+                <p>
+                  <strong>Europe:</strong> {selectedGame.EU_Sales?.toFixed(2)}
+                </p>
+                <p>
+                  <strong>Japan:</strong> {selectedGame.JP_Sales?.toFixed(2)}
+                </p>
+                <p>
+                  <strong>Other Regions:</strong>{" "}
+                  {selectedGame.Other_Sales?.toFixed(2)}
+                </p>
+                <p>
+                  <strong>Global:</strong>{" "}
+                  {selectedGame.Global_Sales?.toFixed(2)}
+                </p>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
