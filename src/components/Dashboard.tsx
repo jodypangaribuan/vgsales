@@ -51,7 +51,7 @@ const Dashboard: React.FC = () => {
   const loadData = useCallback(async (): Promise<void> => {
     try {
       setLoading(true);
-      const response = await fetch("/vgsales.csv");
+      const response = await fetch("/vgsales/data/vgsales.csv"); // Updated path
       const csvText = await response.text();
       const parsedData = await parseCSV(csvText);
       // Add calculated field: Total Regional Sales
@@ -892,7 +892,7 @@ const Dashboard: React.FC = () => {
               <div className="flex flex-col items-center">
                 <div className="w-24 h-24 rounded-full overflow-hidden mb-4">
                   <img
-                    src="/saya.jpg"
+                    src="/vgsales/images/saya.jpg" // Updated path
                     alt="Profile"
                     className="w-full h-full object-cover"
                   />
