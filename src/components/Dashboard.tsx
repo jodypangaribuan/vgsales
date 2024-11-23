@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import {
   BarChart,
   Bar,
@@ -31,46 +31,70 @@ const Dashboard: React.FC = () => {
     data: Array<{ [key: string]: string | number }>;
     type: "bar" | "line" | "pie";
   } | null>(null);
+  const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
+  const [darkMode, setDarkMode] = useState<boolean>(false);
+  const [showProfileModal, setShowProfileModal] = useState(false);
 
-  const VIBRANT_COLORS: string[] = [
-    "#FF7E7E", // Bright Coral
-    "#7EBAFF", // Sky Blue
-    "#FFB67E", // Peach
-    "#7EFF8E", // Mint Green
-    "#D17EFF", // Bright Purple
-    "#FF7EC5", // Hot Pink
-    "#FFE57E", // Bright Yellow
-    "#7EFFD4", // Turquoise
-    "#FF9B7E", // Salmon
-    "#7EFFFF", // Cyan
+  const CHART_COLORS: string[] = [
+    "#34D399", // emerald-400
+    "#60A5FA", // blue-400
+    "#F472B6", // pink-400
+    "#A78BFA", // violet-400
+    "#FBBF24", // amber-400
+    "#2DD4BF", // teal-400
+    "#FB923C", // orange-400
+    "#4ADE80", // green-400
+    "#818CF8", // indigo-400
+    "#38BDF8", // sky-400
   ];
 
-  useEffect(() => {
-    const loadData = async (): Promise<void> => {
-      try {
-        const response = await fetch("/vgsales.csv");
-        const csvText = await response.text();
-        const parsedData = await parseCSV(csvText);
-        setData(parsedData);
-      } catch (error) {
-        console.error("Error loading data:", error);
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    loadData();
+  const loadData = useCallback(async (): Promise<void> => {
+    try {
+      setLoading(true);
+      const response = await fetch("/vgsales.csv");
+      const csvText = await response.text();
+      const parsedData = await parseCSV(csvText);
+      // Add calculated field: Total Regional Sales
+      const dataWithCalculatedFields = parsedData.map((game) => ({
+        ...game,
+        Total_Regional_Sales:
+          (game.NA_Sales || 0) +
+          (game.EU_Sales || 0) +
+          (game.JP_Sales || 0) +
+          (game.Other_Sales || 0),
+      }));
+      setData(dataWithCalculatedFields);
+      setLastUpdated(new Date());
+    } catch (error) {
+      console.error("Error loading data:", error);
+    } finally {
+      setLoading(false);
+    }
   }, []);
+
+  useEffect(() => {
+    loadData();
+  }, [loadData]);
+
+  useEffect(() => {
+    if (darkMode) {
+      document.documentElement.classList.add("dark");
+    } else {
+      document.documentElement.classList.remove("dark");
+    }
+  }, [darkMode]);
 
   const filteredData = React.useMemo(() => {
     return data.filter((game) => {
       const yearMatch =
-        filterYear === "all" || game.Year === parseInt(filterYear);
+        filterYear === "all" || (game.Year && String(game.Year) === filterYear);
       const platformMatch =
         filterPlatform === "all" || game.Platform === filterPlatform;
       return yearMatch && platformMatch;
     });
   }, [data, filterYear, filterPlatform]);
+
+  const isDataEmpty = filteredData.length === 0;
 
   const platformSales = React.useMemo(() => {
     return filteredData.reduce<Record<string, number>>((acc, game) => {
@@ -190,32 +214,95 @@ const Dashboard: React.FC = () => {
   );
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      {/* Modern Header */}
-      <div className="bg-gradient-to-r from-primary to-secondary px-6 py-4 shadow-lg">
+    <div className="min-h-screen bg-gray-50 dark:bg-gray-900 transition-colors duration-200">
+      {/* Enhanced Modern Header */}
+      <div className="bg-gradient-to-r from-indigo-600 to-blue-500 dark:from-indigo-800 dark:to-blue-900 px-6 py-6 shadow-xl">
         <div className="max-w-7xl mx-auto">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center space-x-3">
-              <div className="bg-white p-2 rounded-lg shadow-glass backdrop-blur-glass">
+          <div className="flex flex-col md:flex-row md:items-center md:justify-between space-y-4 md:space-y-0">
+            <div className="flex items-center space-x-4">
+              <div className="bg-white/10 p-3 rounded-xl shadow-glass backdrop-blur-md border border-white/20">
                 <svg
-                  className="w-8 h-8 text-primary"
-                  fill="currentColor"
+                  className="w-8 h-8 text-white"
+                  fill="none"
+                  stroke="currentColor"
                   viewBox="0 0 24 24"
                 >
-                  <path d="M21 12c0-1.2-.5-2.3-1.3-3.1-.8-.8-1.9-1.3-3.1-1.3H7.4c-1.2 0-2.3.5-3.1 1.3C3.5 9.7 3 10.8 3 12s.5 2.3 1.3 3.1c.8.8 1.9 1.3 3.1 1.3h9.2c1.2 0 2.3-.5 3.1-1.3.8-.8 1.3-1.9 1.3-3.1zM7.4 14.6c-1.4 0-2.6-1.2-2.6-2.6s1.2-2.6 2.6-2.6 2.6 1.2 2.6 2.6-1.2 2.6-2.6 2.6z" />
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth="2"
+                    d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"
+                  />
                 </svg>
               </div>
-              <h1 className="text-2xl font-bold text-white">
-                GameStats Dashboard
-              </h1>
+              <div>
+                <h1 className="text-2xl font-bold text-white">
+                  GameStats Dashboard
+                </h1>
+                <p className="text-blue-100 text-sm">
+                  Video Game Sales Analytics
+                </p>
+              </div>
+              <button
+                onClick={() => setDarkMode(!darkMode)}
+                className="p-2 rounded-lg bg-white/10 hover:bg-white/20 transition-colors duration-200"
+              >
+                {darkMode ? (
+                  <svg
+                    className="w-6 h-6 text-yellow-300"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth="2"
+                      d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z"
+                    />
+                  </svg>
+                ) : (
+                  <svg
+                    className="w-6 h-6 text-gray-100"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth="2"
+                      d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z"
+                    />
+                  </svg>
+                )}
+              </button>
+              <button
+                onClick={() => setShowProfileModal(true)}
+                className="p-2 rounded-lg bg-white/10 hover:bg-white/20 transition-colors duration-200"
+              >
+                <svg
+                  className="w-6 h-6 text-white"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth="2"
+                    d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"
+                  />
+                </svg>
+              </button>
             </div>
 
-            {/* Navigation Pills */}
-            <div className="flex bg-white/20 p-1 rounded-lg backdrop-blur-sm">
+            {/* Enhanced Navigation Pills */}
+            <div className="flex bg-white/10 dark:bg-gray-800/30 p-1 rounded-lg backdrop-blur-md border border-white/20">
               <button
-                className={`px-4 py-2 rounded-md transition-all duration-200 ${
+                className={`px-6 py-2 rounded-md transition-all duration-200 ${
                   currentView === "dashboard"
-                    ? "bg-white text-primary shadow-md"
+                    ? "bg-white text-indigo-600 shadow-md"
                     : "text-white hover:bg-white/10"
                 }`}
                 onClick={() => setCurrentView("dashboard")}
@@ -223,9 +310,9 @@ const Dashboard: React.FC = () => {
                 Dashboard
               </button>
               <button
-                className={`px-4 py-2 rounded-md transition-all duration-200 ${
+                className={`px-6 py-2 rounded-md transition-all duration-200 ${
                   currentView === "table"
-                    ? "bg-white text-primary shadow-md"
+                    ? "bg-white text-indigo-600 shadow-md"
                     : "text-white hover:bg-white/10"
                 }`}
                 onClick={() => setCurrentView("table")}
@@ -234,10 +321,10 @@ const Dashboard: React.FC = () => {
               </button>
             </div>
 
-            {/* Filters Group */}
-            <div className="flex gap-3">
+            {/* Enhanced Filters Group */}
+            <div className="flex flex-wrap gap-3">
               <select
-                className="bg-white/10 border border-white/20 text-white rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-white/50"
+                className="bg-white/10 dark:bg-gray-800/30 border border-white/20 text-white rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-white/50 backdrop-blur-md dark:focus:ring-gray-500"
                 value={filterYear}
                 onChange={(e) => setFilterYear(e.target.value)}
               >
@@ -251,7 +338,7 @@ const Dashboard: React.FC = () => {
                 ))}
               </select>
               <select
-                className="bg-white/10 border border-white/20 text-white rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-white/50"
+                className="bg-white/10 dark:bg-gray-800/30 border border-white/20 text-white rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-white/50 backdrop-blur-md dark:focus:ring-gray-500"
                 value={filterPlatform}
                 onChange={(e) => setFilterPlatform(e.target.value)}
               >
@@ -268,160 +355,219 @@ const Dashboard: React.FC = () => {
                   </option>
                 ))}
               </select>
+              <button
+                onClick={loadData}
+                className="bg-white/10 border border-white/20 text-white rounded-lg px-4 py-2 hover:bg-white/20 focus:outline-none focus:ring-2 focus:ring-white/50 backdrop-blur-md flex items-center gap-2"
+              >
+                <svg
+                  className="w-4 h-4"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth="2"
+                    d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"
+                  />
+                </svg>
+                Refresh
+              </button>
             </div>
           </div>
         </div>
       </div>
 
-      {/* Main Content */}
+      {/* Update chart container backgrounds */}
       <div className="max-w-7xl mx-auto px-6 py-8">
-        {currentView === "table" ? (
+        {lastUpdated && (
+          <p className="text-sm text-gray-500 dark:text-gray-400 mb-4">
+            Data last updated: {lastUpdated.toLocaleString()}
+          </p>
+        )}
+
+        {isDataEmpty ? (
+          <div className="flex flex-col items-center justify-center p-8 bg-white rounded-xl shadow-md">
+            <svg
+              className="w-16 h-16 text-gray-400 mb-4"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth="2"
+                d="M9.172 16.172a4 4 0 015.656 0M9 10h.01M15 10h.01M12 12h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+              />
+            </svg>
+            <h3 className="text-xl font-semibold text-gray-700 mb-2">
+              No Data Found
+            </h3>
+            <p className="text-gray-500 text-center mb-4">
+              There are no games matching your current filter criteria.
+            </p>
+            <div className="flex gap-2">
+              <button
+                onClick={() => setFilterYear("all")}
+                className="px-4 py-2 bg-primary text-white rounded-md hover:bg-primary/80"
+              >
+                Reset Year Filter
+              </button>
+              <button
+                onClick={() => setFilterPlatform("all")}
+                className="px-4 py-2 bg-secondary text-white rounded-md hover:bg-secondary/80"
+              >
+                Reset Platform Filter
+              </button>
+            </div>
+          </div>
+        ) : currentView === "table" ? (
           <TableView data={filteredData} />
         ) : (
           <>
-            {/* Summary Cards - Now with glass morphism */}
-            <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-6 mb-8">
-              <div className="bg-white/80 backdrop-blur-sm p-6 rounded-xl shadow-glass border border-white/50 hover:transform hover:scale-105 transition-all duration-200">
-                <div className="flex items-center space-x-4">
-                  <div className="p-3 bg-primary/10 rounded-lg">
-                    <svg
-                      className="w-6 h-6 text-primary"
-                      fill="none"
-                      stroke="currentColor"
-                      viewBox="0 0 24 24"
-                    >
-                      <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        strokeWidth="2"
-                        d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
-                      />
-                    </svg>
-                  </div>
-                  <div>
-                    <p className="text-sm font-medium text-gray-500">
-                      Total Sales
-                    </p>
-                    <p className="text-2xl font-bold text-gray-900">
-                      ${totalSales.toFixed(2)}M
-                    </p>
-                  </div>
-                </div>
-              </div>
-              <div className="bg-white/80 backdrop-blur-sm p-6 rounded-xl shadow-glass border border-white/50 hover:transform hover:scale-105 transition-all duration-200">
-                <div className="flex items-center space-x-4">
-                  <div className="p-3 bg-secondary/10 rounded-lg">
-                    <svg
-                      className="w-6 h-6 text-secondary"
-                      fill="none"
-                      stroke="currentColor"
-                      viewBox="0 0 24 24"
-                    >
-                      <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        strokeWidth="2"
-                        d="M15 5v2m0 4v2m0 4v2M5 5a2 2 0 00-2 2v3a2 2 0 110 4v3a2 2 0 002 2h14a2 2 0 002-2v-3a2 2 0 110-4V7a2 2 0 00-2-2H5z"
-                      />
-                    </svg>
-                  </div>
-                  <div>
-                    <p className="text-sm font-medium text-gray-500">
-                      Total Games
-                    </p>
-                    <p className="text-2xl font-bold text-gray-900">
-                      {metrics.totalGames}
-                    </p>
-                    <p className="text-sm text-gray-500">
-                      Avg: ${metrics.avgSalesPerGame.toFixed(2)}M/game
-                    </p>
+            {/* Summary Cards - Now with glass morphism in a dynamic layout */}
+            <div className="grid grid-cols-12 gap-6 mb-8">
+              <div className="col-span-12 md:col-span-6 xl:col-span-3">
+                {/* Total Sales Card */}
+                <div className="bg-gradient-to-br from-primary/5 to-primary/10 dark:from-primary/20 dark:to-primary/30 backdrop-blur-sm p-6 rounded-xl shadow-glass border border-white/50 dark:border-gray-700 hover:transform hover:scale-105 transition-all duration-200">
+                  <div className="flex items-center space-x-4">
+                    <div className="p-3 bg-primary/10 rounded-lg">
+                      <svg
+                        className="w-6 h-6 text-primary dark:text-white"
+                        fill="none"
+                        stroke="currentColor"
+                        viewBox="0 0 24 24"
+                      >
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          strokeWidth="2"
+                          d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+                        />
+                      </svg>
+                    </div>
+                    <div>
+                      <p className="text-sm font-medium text-gray-500 dark:text-gray-100">
+                        Total Sales
+                      </p>
+                      <p className="text-2xl font-bold text-gray-900 dark:text-white">
+                        ${totalSales.toFixed(2)}M
+                      </p>
+                    </div>
                   </div>
                 </div>
               </div>
-              <div className="bg-white/80 backdrop-blur-sm p-6 rounded-xl shadow-glass border border-white/50 hover:transform hover:scale-105 transition-all duration-200">
-                <div className="flex items-center space-x-4">
-                  <div className="p-3 bg-green-100 rounded-lg">
-                    <svg
-                      className="w-6 h-6 text-green-600"
-                      fill="none"
-                      stroke="currentColor"
-                      viewBox="0 0 24 24"
-                    >
-                      <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        strokeWidth="2"
-                        d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"
-                      />
-                    </svg>
-                  </div>
-                  <div>
-                    <p className="text-sm font-medium text-gray-500">
-                      Top Platform
-                    </p>
-                    <p className="text-2xl font-bold text-gray-900">
-                      {metrics.topPlatform[0]}
-                    </p>
-                    <p className="text-sm text-gray-500">
-                      ${metrics.topPlatform[1].toFixed(2)}M sales
-                    </p>
+              <div className="col-span-12 md:col-span-6 xl:col-span-3">
+                {/* Total Games Card */}
+                <div className="bg-gradient-to-br from-secondary/5 to-secondary/10 dark:from-secondary/20 dark:to-secondary/30 backdrop-blur-sm p-6 rounded-xl shadow-glass border border-white/50 dark:border-gray-700 hover:transform hover:scale-105 transition-all duration-200">
+                  <div className="flex items-center space-x-4">
+                    <div className="p-3 bg-secondary/10 rounded-lg">
+                      <svg
+                        className="w-6 h-6 text-secondary dark:text-white"
+                        fill="none"
+                        stroke="currentColor"
+                        viewBox="0 0 24 24"
+                      >
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          strokeWidth="2"
+                          d="M15 5v2m0 4v2m0 4v2M5 5a2 2 0 00-2 2v3a2 2 0 110 4v3a2 2 0 002 2h14a2 2 0 002-2v-3a2 2 0 110-4V7a2 2 0 00-2-2H5z"
+                        />
+                      </svg>
+                    </div>
+                    <div>
+                      <p className="text-sm font-medium text-gray-500 dark:text-gray-100">
+                        Total Games
+                      </p>
+                      <p className="text-2xl font-bold text-gray-900 dark:text-white">
+                        {metrics.totalGames}
+                      </p>
+                      <p className="text-sm text-gray-500 dark:text-gray-100">
+                        Avg: ${metrics.avgSalesPerGame.toFixed(2)}M/game
+                      </p>
+                    </div>
                   </div>
                 </div>
               </div>
-              <div className="bg-white/80 backdrop-blur-sm p-6 rounded-xl shadow-glass border border-white/50 hover:transform hover:scale-105 transition-all duration-200">
-                <div className="flex items-center space-x-4">
-                  <div className="p-3 bg-purple-100 rounded-lg">
-                    <svg
-                      className="w-6 h-6 text-purple-600"
-                      fill="none"
-                      stroke="currentColor"
-                      viewBox="0 0 24 24"
-                    >
-                      <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        strokeWidth="2"
-                        d="M3 6l3 1m0 0l-3 9a5.002 5.002 0 006.001 0M6 7l3 9M6 7l6-2m6 2l3-1m-3 1l-3 9a5.002 5.002 0 006.001 0M18 7l3 9m-3-9l-6-2m0-2v2m0 16V5m0 16H9m3 0h3"
-                      />
-                    </svg>
+              <div className="col-span-12 md:col-span-6 xl:col-span-3">
+                {/* Top Platform Card */}
+                <div className="bg-gradient-to-br from-green-50 to-green-100 dark:from-green-900/20 dark:to-green-800/30 backdrop-blur-sm p-6 rounded-xl shadow-glass border border-white/50 dark:border-gray-700 hover:transform hover:scale-105 transition-all duration-200">
+                  <div className="flex items-center space-x-4">
+                    <div className="p-3 bg-green-100 dark:bg-green-800/50 rounded-lg">
+                      <svg
+                        className="w-6 h-6 text-green-600 dark:text-white"
+                        fill="none"
+                        stroke="currentColor"
+                        viewBox="0 0 24 24"
+                      >
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          strokeWidth="2"
+                          d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5z"
+                        />
+                      </svg>
+                    </div>
+                    <div>
+                      <p className="text-sm font-medium text-gray-500 dark:text-gray-100">
+                        Top Platform
+                      </p>
+                      <p className="text-2xl font-bold text-gray-900 dark:text-white">
+                        {metrics.topPlatform[0]}
+                      </p>
+                      <p className="text-sm text-gray-500 dark:text-gray-100">
+                        ${metrics.topPlatform[1].toFixed(2)}M sales
+                      </p>
+                    </div>
                   </div>
-                  <div>
-                    <p className="text-sm font-medium text-gray-500">
-                      Largest Market
-                    </p>
-                    <p className="text-2xl font-bold text-gray-900">
-                      NA Region
-                    </p>
-                    <p className="text-sm text-gray-500">
-                      {metrics.marketShare.NA.toFixed(1)}% market share
-                    </p>
+                </div>
+              </div>
+              <div className="col-span-12 md:col-span-6 xl:col-span-3">
+                {/* Largest Market Card */}
+                <div className="bg-gradient-to-br from-purple-50 to-purple-100 dark:from-purple-900/20 dark:to-purple-800/30 backdrop-blur-sm p-6 rounded-xl shadow-glass border border-white/50 dark:border-gray-700 hover:transform hover:scale-105 transition-all duration-200">
+                  <div className="flex items-center space-x-4">
+                    <div className="p-3 bg-purple-100 dark:bg-purple-800/50 rounded-lg">
+                      <svg
+                        className="w-6 h-6 text-purple-600 dark:text-white"
+                        fill="none"
+                        stroke="currentColor"
+                        viewBox="0 0 24 24"
+                      >
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          strokeWidth="2"
+                          d="M3 6l3 1m0 0l-3 9a5.002 5.002 0 006.001 0M6 7l3 9M6 7l6-2m6 2l3-1m-3 1l-3 9a5.002 5.002 0 006.001 0M18 7l3 9m-3-9l-6-2m0-2v2m0 16V5m0 16H9m3 0h3"
+                        />
+                      </svg>
+                    </div>
+                    <div>
+                      <p className="text-sm font-medium text-gray-500 dark:text-gray-100">
+                        Largest Market
+                      </p>
+                      <p className="text-2xl font-bold text-gray-900 dark:text-white">
+                        NA Region
+                      </p>
+                      <p className="text-sm text-gray-500 dark:text-gray-100">
+                        {metrics.marketShare.NA.toFixed(1)}% market share
+                      </p>
+                    </div>
                   </div>
                 </div>
               </div>
             </div>
 
-            {/* Rest of the dashboard content */}
-            <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
-              {/* Sales Trend - Full Width */}
-              <div
-                className="md:col-span-2 xl:col-span-3 bg-white p-4 rounded-xl shadow-md hover:shadow-lg transition-all cursor-pointer"
-                onClick={() =>
-                  setSelectedChart({
-                    title: "Sales Trend Over Years",
-                    data: Object.entries(yearlyTrend)
-                      .filter(([year]) => year !== "N/A" && year !== undefined)
-                      .map(([year, sales]) => ({
-                        year: parseInt(year),
-                        sales: Number(sales.toFixed(2)),
-                      })),
-                    type: "line",
-                  })
-                }
-              >
-                <h2 className="text-lg font-semibold mb-2 text-gray-700">
+            {/* Charts Grid - Modern Layout */}
+            <div className="grid grid-cols-12 gap-4">
+              {/* Sales Trend - Top Row */}
+              <div className="col-span-12 bg-white dark:bg-gray-800 rounded-xl shadow-md p-4 hover:shadow-lg transition-all">
+                <h2 className="text-lg font-semibold mb-2 text-gray-700 dark:text-gray-200">
                   Sales Trend Over Years
                 </h2>
-                <ResponsiveContainer width="100%" height={300}>
+                <ResponsiveContainer width="100%" height={250}>
                   <LineChart
                     data={Object.entries(yearlyTrend)
                       .filter(([year]) => year !== "N/A" && year !== undefined)
@@ -431,9 +577,15 @@ const Dashboard: React.FC = () => {
                       }))
                       .sort((a, b) => a.year - b.year)}
                   >
-                    <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
-                    <XAxis dataKey="year" />
-                    <YAxis />
+                    <CartesianGrid
+                      strokeDasharray="3 3"
+                      stroke={darkMode ? "#374151" : "#f0f0f0"}
+                    />
+                    <XAxis
+                      dataKey="year"
+                      stroke={darkMode ? "#9CA3AF" : "#666"}
+                    />
+                    <YAxis stroke={darkMode ? "#9CA3AF" : "#666"} />
                     <Tooltip />
                     <Legend />
                     <Line
@@ -446,26 +598,12 @@ const Dashboard: React.FC = () => {
                 </ResponsiveContainer>
               </div>
 
-              {/* Platform Sales - 2 Columns */}
-              <div
-                className="md:col-span-2 bg-white p-4 rounded-xl shadow-md hover:shadow-lg transition-all cursor-pointer"
-                onClick={() =>
-                  setSelectedChart({
-                    title: "Sales by Platform",
-                    data: Object.entries(platformSales).map(
-                      ([platform, sales]) => ({
-                        platform,
-                        sales: Number(sales.toFixed(2)),
-                      })
-                    ),
-                    type: "bar",
-                  })
-                }
-              >
-                <h2 className="text-lg font-semibold mb-2 text-gray-700">
+              {/* Main Charts Row */}
+              <div className="col-span-12 lg:col-span-7 bg-white dark:bg-gray-800 rounded-xl shadow-md p-4 hover:shadow-lg transition-all">
+                <h2 className="text-lg font-semibold mb-2 text-gray-700 dark:text-gray-200">
                   Sales by Platform
                 </h2>
-                <ResponsiveContainer width="100%" height={300}>
+                <ResponsiveContainer width="100%" height={400}>
                   <BarChart
                     data={Object.entries(platformSales).map(
                       ([platform, sales]) => ({
@@ -474,9 +612,15 @@ const Dashboard: React.FC = () => {
                       })
                     )}
                   >
-                    <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
-                    <XAxis dataKey="platform" />
-                    <YAxis />
+                    <CartesianGrid
+                      strokeDasharray="3 3"
+                      stroke={darkMode ? "#374151" : "#f0f0f0"}
+                    />
+                    <XAxis
+                      dataKey="platform"
+                      stroke={darkMode ? "#9CA3AF" : "#666"}
+                    />
+                    <YAxis stroke={darkMode ? "#9CA3AF" : "#666"} />
                     <Tooltip />
                     <Legend />
                     <Bar dataKey="sales" fill="#7EBAFF" />
@@ -484,24 +628,12 @@ const Dashboard: React.FC = () => {
                 </ResponsiveContainer>
               </div>
 
-              {/* Genre Distribution - 1 Column */}
-              <div
-                className="bg-white p-4 rounded-xl shadow-md hover:shadow-lg transition-all cursor-pointer"
-                onClick={() =>
-                  setSelectedChart({
-                    title: "Sales by Genre",
-                    data: Object.entries(genreSales).map(([genre, sales]) => ({
-                      name: genre,
-                      value: Number(sales.toFixed(2)),
-                    })),
-                    type: "pie",
-                  })
-                }
-              >
-                <h2 className="text-lg font-semibold mb-2 text-gray-700">
+              {/* Genre Pie Chart */}
+              <div className="col-span-12 lg:col-span-5 bg-white dark:bg-gray-800 rounded-xl shadow-md p-4 hover:shadow-lg transition-all">
+                <h2 className="text-lg font-semibold mb-2 text-gray-700 dark:text-gray-200">
                   Sales by Genre
                 </h2>
-                <ResponsiveContainer width="100%" height={600}>
+                <ResponsiveContainer width="100%" height={400}>
                   <PieChart>
                     <Pie
                       data={Object.entries(genreSales).map(
@@ -512,43 +644,34 @@ const Dashboard: React.FC = () => {
                       )}
                       cx="50%"
                       cy="50%"
-                      outerRadius={150}
+                      outerRadius={120}
+                      innerRadius={60}
                       dataKey="value"
                       label
                     >
                       {Object.entries(genreSales).map((_, index) => (
                         <Cell
                           key={`cell-${index}`}
-                          fill={VIBRANT_COLORS[index]}
+                          fill={CHART_COLORS[index]}
                         />
                       ))}
                     </Pie>
                     <Tooltip />
-                    <Legend />
+                    <Legend
+                      layout="vertical"
+                      align="right"
+                      verticalAlign="middle"
+                    />
                   </PieChart>
                 </ResponsiveContainer>
               </div>
 
-              {/* Regional Distribution - 1 Column */}
-              <div
-                className="bg-white p-4 rounded-xl shadow-md hover:shadow-lg transition-all cursor-pointer"
-                onClick={() =>
-                  setSelectedChart({
-                    title: "Regional Sales Distribution",
-                    data: Object.entries(regionalSales).map(
-                      ([region, sales]) => ({
-                        name: region,
-                        value: Number(sales.toFixed(2)),
-                      })
-                    ),
-                    type: "pie",
-                  })
-                }
-              >
-                <h2 className="text-lg font-semibold mb-2 text-gray-700">
+              {/* Bottom Row */}
+              <div className="col-span-12 lg:col-span-5 bg-white dark:bg-gray-800 rounded-xl shadow-md p-4 hover:shadow-lg transition-all">
+                <h2 className="text-lg font-semibold mb-2 text-gray-700 dark:text-gray-200">
                   Regional Sales Distribution
                 </h2>
-                <ResponsiveContainer width="100%" height={500}>
+                <ResponsiveContainer width="100%" height={350}>
                   <PieChart>
                     <Pie
                       data={Object.entries(regionalSales).map(
@@ -559,43 +682,33 @@ const Dashboard: React.FC = () => {
                       )}
                       cx="50%"
                       cy="50%"
-                      outerRadius={150}
+                      outerRadius={100}
+                      innerRadius={60}
                       dataKey="value"
                       label
                     >
                       {Object.entries(regionalSales).map((_, index) => (
                         <Cell
                           key={`cell-${index}`}
-                          fill={VIBRANT_COLORS[index]}
+                          fill={CHART_COLORS[index]}
                         />
                       ))}
                     </Pie>
                     <Tooltip />
-                    <Legend />
+                    <Legend
+                      layout="vertical"
+                      align="right"
+                      verticalAlign="middle"
+                    />
                   </PieChart>
                 </ResponsiveContainer>
               </div>
 
-              {/* Average Sales by Genre - 2 Columns */}
-              <div
-                className="md:col-span-2 bg-white p-4 rounded-xl shadow-md hover:shadow-lg transition-all cursor-pointer"
-                onClick={() =>
-                  setSelectedChart({
-                    title: "Average Sales by Genre",
-                    data: Object.entries(averageSalesByGenre).map(
-                      ([genre, avg]) => ({
-                        genre,
-                        average: Number(avg.toFixed(2)),
-                      })
-                    ),
-                    type: "bar",
-                  })
-                }
-              >
-                <h2 className="text-lg font-semibold mb-2 text-gray-700">
+              <div className="col-span-12 lg:col-span-7 bg-white dark:bg-gray-800 rounded-xl shadow-md p-4 hover:shadow-lg transition-all">
+                <h2 className="text-lg font-semibold mb-2 text-gray-700 dark:text-gray-200">
                   Average Sales by Genre
                 </h2>
-                <ResponsiveContainer width="100%" height={300}>
+                <ResponsiveContainer width="100%" height={350}>
                   <BarChart
                     data={Object.entries(averageSalesByGenre).map(
                       ([genre, avg]) => ({
@@ -604,15 +717,19 @@ const Dashboard: React.FC = () => {
                       })
                     )}
                   >
-                    <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
+                    <CartesianGrid
+                      strokeDasharray="3 3"
+                      stroke={darkMode ? "#374151" : "#f0f0f0"}
+                    />
                     <XAxis
                       dataKey="genre"
                       angle={-45}
                       textAnchor="end"
                       interval={0}
                       height={100}
+                      stroke={darkMode ? "#9CA3AF" : "#666"}
                     />
-                    <YAxis />
+                    <YAxis stroke={darkMode ? "#9CA3AF" : "#666"} />
                     <Tooltip />
                     <Legend />
                     <Bar dataKey="average" fill="#FFB67E" />
@@ -620,29 +737,12 @@ const Dashboard: React.FC = () => {
                 </ResponsiveContainer>
               </div>
 
-              {/* Top Games - Full Width */}
-              <div
-                className="md:col-span-2 xl:col-span-3 bg-white p-4 rounded-xl shadow-md hover:shadow-lg transition-all cursor-pointer"
-                onClick={() =>
-                  setSelectedChart({
-                    title: "Top 10 Games by Global Sales",
-                    data: filteredData
-                      .sort(
-                        (a, b) => (b.Global_Sales || 0) - (a.Global_Sales || 0)
-                      )
-                      .slice(0, 10)
-                      .map((game) => ({
-                        Name: game.Name,
-                        Global_Sales: game.Global_Sales,
-                      })),
-                    type: "bar",
-                  })
-                }
-              >
-                <h2 className="text-lg font-semibold mb-2 text-gray-700">
+              {/* Top Games - Bottom Full Width */}
+              <div className="col-span-12 bg-white dark:bg-gray-800 rounded-xl shadow-md p-4 hover:shadow-lg transition-all">
+                <h2 className="text-lg font-semibold mb-2 text-gray-700 dark:text-gray-200">
                   Top 10 Games by Global Sales
                 </h2>
-                <ResponsiveContainer width="100%" height={300}>
+                <ResponsiveContainer width="100%" height={250}>
                   <BarChart
                     data={filteredData
                       .sort(
@@ -650,15 +750,19 @@ const Dashboard: React.FC = () => {
                       )
                       .slice(0, 10)}
                   >
-                    <CartesianGrid strokeDasharray="3 3" />
+                    <CartesianGrid
+                      strokeDasharray="3 3"
+                      stroke={darkMode ? "#374151" : "#f0f0f0"}
+                    />
                     <XAxis
                       dataKey="Name"
                       angle={-45}
                       textAnchor="end"
                       interval={0}
                       height={100}
+                      stroke={darkMode ? "#9CA3AF" : "#666"}
                     />
-                    <YAxis />
+                    <YAxis stroke={darkMode ? "#9CA3AF" : "#666"} />
                     <Tooltip />
                     <Legend />
                     <Bar dataKey="Global_Sales" fill="#7EFF8E" />
@@ -669,8 +773,8 @@ const Dashboard: React.FC = () => {
 
             {/* Chart Detail Modal */}
             {selectedChart && (
-              <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-                <div className="bg-white rounded-lg p-6 max-w-6xl w-full max-h-[90vh] overflow-y-auto">
+              <div className="fixed inset-0 bg-black bg-opacity-50 dark:bg-opacity-70 flex items-center justify-center p-4 z-50">
+                <div className="bg-white dark:bg-gray-800 rounded-lg p-6 max-w-6xl w-full max-h-[90vh] overflow-y-auto">
                   <div className="flex justify-between items-center mb-4">
                     <h2 className="text-xl font-bold">{selectedChart.title}</h2>
                     <button
@@ -686,11 +790,15 @@ const Dashboard: React.FC = () => {
                         case "bar":
                           return (
                             <BarChart data={selectedChart.data}>
-                              <CartesianGrid strokeDasharray="3 3" />
+                              <CartesianGrid
+                                strokeDasharray="3 3"
+                                stroke={darkMode ? "#374151" : "#f0f0f0"}
+                              />
                               <XAxis
                                 dataKey={Object.keys(selectedChart.data[0])[0]}
+                                stroke={darkMode ? "#9CA3AF" : "#666"}
                               />
-                              <YAxis />
+                              <YAxis stroke={darkMode ? "#9CA3AF" : "#666"} />
                               <Tooltip />
                               <Legend />
                               <Bar
@@ -702,11 +810,15 @@ const Dashboard: React.FC = () => {
                         case "line":
                           return (
                             <LineChart data={selectedChart.data}>
-                              <CartesianGrid strokeDasharray="3 3" />
+                              <CartesianGrid
+                                strokeDasharray="3 3"
+                                stroke={darkMode ? "#374151" : "#f0f0f0"}
+                              />
                               <XAxis
                                 dataKey={Object.keys(selectedChart.data[0])[0]}
+                                stroke={darkMode ? "#9CA3AF" : "#666"}
                               />
-                              <YAxis />
+                              <YAxis stroke={darkMode ? "#9CA3AF" : "#666"} />
                               <Tooltip />
                               <Legend />
                               <Line
@@ -729,9 +841,7 @@ const Dashboard: React.FC = () => {
                                   <Cell
                                     key={`cell-${index}`}
                                     fill={
-                                      VIBRANT_COLORS[
-                                        index % VIBRANT_COLORS.length
-                                      ]
+                                      CHART_COLORS[index % CHART_COLORS.length]
                                     }
                                   />
                                 ))}
@@ -751,6 +861,88 @@ const Dashboard: React.FC = () => {
           </>
         )}
       </div>
+      {showProfileModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 dark:bg-opacity-70 flex items-center justify-center p-4 z-50">
+          <div className="bg-white dark:bg-gray-800 rounded-xl shadow-xl p-6 max-w-md w-full transform transition-all duration-300 scale-100">
+            <div className="flex justify-between items-center mb-6">
+              <h2 className="text-2xl font-bold text-gray-900 dark:text-white">
+                Developer Profile
+              </h2>
+              <button
+                onClick={() => setShowProfileModal(false)}
+                className="text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200"
+              >
+                <svg
+                  className="w-6 h-6"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth="2"
+                    d="M6 18L18 6M6 6l12 12"
+                  />
+                </svg>
+              </button>
+            </div>
+
+            <div className="space-y-6">
+              <div className="flex flex-col items-center">
+                <div className="w-24 h-24 rounded-full overflow-hidden mb-4">
+                  <img
+                    src="/saya.jpg"
+                    alt="Profile"
+                    className="w-full h-full object-cover"
+                  />
+                </div>
+                <h3 className="text-xl font-semibold text-gray-900 dark:text-white">
+                  Jody Edriano Pangaribuan
+                </h3>
+                <p className="text-gray-500 dark:text-gray-400">11323025</p>
+                <p className="text-gray-500 dark:text-gray-400 mb-4">
+                  Information Technology
+                </p>
+              </div>
+
+              <div className="flex justify-center space-x-4">
+                <a
+                  href="https://github.com/jodypangaribuan"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="flex items-center space-x-2 px-4 py-2 bg-gray-900 text-white rounded-lg hover:bg-gray-700 transition-colors duration-200"
+                >
+                  <svg
+                    className="w-5 h-5"
+                    fill="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path d="M12 0C5.37 0 0 5.37 0 12c0 5.31 3.435 9.795 8.205 11.385.6.105.825-.255.825-.57 0-.285-.015-1.23-.015-2.235-3.015.555-3.795-.735-4.035-1.41-.135-.345-.72-1.41-1.23-1.695-.42-.225-1.02-.78-.015-.795.945-.015 1.62.87 1.845 1.23 1.08 1.815 2.805 1.305 3.495.99.105-.78.42-1.305.765-1.605-2.67-.3-5.46-1.335-5.46-5.925 0-1.305.465-2.385 1.23-3.225-.12-.3-.54-1.53.12-3.18 0 0 1.005-.315 3.3 1.23.96-.27 1.98-.405 3-.405s2.04.135 3 .405c2.295-1.56 3.3-1.23 3.3-1.23.66 1.65.24 2.88.12 3.18.765.84 1.23 1.905 1.23 3.225 0 4.605-2.805 5.625-5.475 5.925.435.375.81 1.095.81 2.22 0 1.605-.015 2.895-.015 3.3 0 .315.225.69.825.57A12.02 12.02 0 0024 12c0-6.63-5.37-12-12-12z" />
+                  </svg>
+                  <span>GitHub</span>
+                </a>
+
+                <a
+                  href="https://instagram.com/jody.drian"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="flex items-center space-x-2 px-4 py-2 bg-gradient-to-r from-purple-500 to-pink-500 text-white rounded-lg hover:from-purple-600 hover:to-pink-600 transition-colors duration-200"
+                >
+                  <svg
+                    className="w-5 h-5"
+                    fill="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path d="M12 2.163c3.204 0 3.584.012 4.85.07 3.252.148 4.771 1.691 4.919 4.919.058 1.265.069 1.645.069 4.849 0 3.205-.012 3.584-.069 4.849-.149 3.225-1.664 4.771-4.919 4.919-1.266.058-1.644.07-4.85.07-3.204 0-3.584-.012-4.849-.07-3.26-.149-4.771-1.699-4.919-4.92-.058-1.265-.07-1.644-.07-4.849 0-3.204.013-3.583.07-4.849.149-3.227 1.664-4.771 4.919-4.919 1.266-.057 1.645-.069 4.849-.069zm0-2.163c-3.259 0-3.667.014-4.947.072-4.358.2-6.78 2.618-6.98 6.98-.059 1.281-.073 1.689-.073 4.948 0 3.259.014 3.668.072 4.948.2 4.358 2.618 6.78 6.98 6.98 1.281.058 1.689.072 4.948.072 3.259 0 3.668-.014 4.948-.072 4.354-.2 6.782-2.618 6.979-6.98.059-1.28.073-1.689.073-4.948 0-3.259-.014-3.667-.072-4.947-.196-4.354-2.617-6.78-6.979-6.98-1.281-.059-1.69-.073-4.949-.073zm0 5.838c-3.403 0-6.162 2.759-6.162 6.162s2.759 6.163 6.162 6.163 6.162-2.759 6.162-6.163c0-3.403-2.759-6.162-6.162-6.162zm0 10.162c-2.209 0-4-1.79-4-4 0-2.209 1.791-4 4-4s4 1.791 4 4c0 2.21-1.791 4-4 4zm6.406-11.845c-.796 0-1.441.645-1.441 1.44s.645 1.44 1.441 1.44c.795 0 1.439-.645 1.439-1.44s-.644-1.44-1.439-1.44z" />
+                  </svg>
+                  <span>Instagram</span>
+                </a>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
